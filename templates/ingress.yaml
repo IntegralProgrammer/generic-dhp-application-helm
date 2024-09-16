@@ -1,0 +1,29 @@
+{{ if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "uhnapp.fullname" . }}
+  labels:
+    {{- include "uhnapp.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ required ".Values.ingress.hostname must be specified!" .Values.ingress.hostname }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ include "uhnapp.fullname" . }}
+                port:
+                  number: {{ required ".Values.ingress.portNumber must be specified!" .Values.ingress.portNumber }}
+            path: /
+            pathType: Prefix
+
+  {{ if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ required ".Values.ingress.hostname must be specified!" .Values.ingress.hostname }}
+      secretName: {{ required ".Values.ingress.tls.secretName must be specified!" .Values.ingress.tls.secretName }}
+  {{ end }}
+
+{{ end }}

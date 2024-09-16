@@ -1,0 +1,111 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "uhnapp.fullname" . }}
+  labels:
+    {{- include "uhnapp.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "uhnapp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "uhnapp.selectorLabels" . | nindent 8 }}
+      annotations:
+        {{ if .Values.prometheus.scrape -}}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.prometheus.port | quote }}
+        {{ end -}}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "uhnapp.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        # Container required to authenticate and create the initial token
+        - name: vault-agent-auth
+          image: "{{ .Values.vault.image.repository }}:{{ .Values.vault.image.tag }}"
+          volumeMounts:
+            - name: vault-config
+              mountPath: /etc/vault
+            - name: vault-shared
+              mountPath: /vault
+          args:
+            [
+              "agent",
+              "-config=/etc/vault/vault-agent-config.hcl",
+              "-log-level=debug",
+            ]
+        - name: consul-template-copy
+          image: hashicorp/consul-template:0.24.1-alpine
+          volumeMounts:
+            - name: vault-shared
+              mountPath: /vault
+          command: ["/bin/ash", "-c"]
+          args: ["cp /bin/consul-template /vault/consul-template"]
+        {{- if .Values.debugDeployment }}
+        - name: debug-post
+          image: alpine:latest
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: vault-shared
+              mountPath: /vault
+            - name: vault-config
+              mountPath: /etc/vault
+          command: ["/bin/ash", "-c"]
+          args:
+            - echo "Consul Template Configuration";
+              cat /etc/vault/consul-template-config.hcl;
+        {{- end }}
+      containers:
+        - name: "{{ required ".Values.appName must be specified!" .Values.appName }}"
+          image: "{{ required ".Values.image.repository must be specified" .Values.image.repository }}:{{ required ".Values.image.tag must be specified" .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/vault/consul-template"]
+          args: ["-config", "/etc/vault/consul-template-config.hcl"]
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: vault-shared
+              mountPath: /vault
+            - name: vault-config
+              mountPath: /etc/vault
+            {{-  if .Values.volumeMounts  -}}
+            {{- toYaml .Values.volumeMounts | nindent 12 -}}
+            {{-  end  }}
+      volumes:
+        - name: vault-shared
+          emptyDir:
+            medium: Memory
+        - name: vault-config
+          configMap:
+            name: {{ include "uhnapp.fullname" . }}
+            items:
+              - key: vault-agent-config.hcl
+                path: vault-agent-config.hcl
+              - key: consul-template-config.hcl
+                path: consul-template-config.hcl
+        {{- if .Values.volumes -}}
+        {{- toYaml .Values.volumes | nindent 8 -}}
+        {{- end }}

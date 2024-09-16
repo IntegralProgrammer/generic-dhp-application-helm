@@ -1,0 +1,113 @@
+# Default values for uhnapp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: gitlab-uhn-registry
+
+ingress:
+  enabled: false
+
+service:
+  enabled: true
+  type: ClusterIP
+  # Port the service exposes to clients.
+  port: 3000
+  # Port the container is serving on.
+  targetPort: 3000
+
+serviceAccount:
+  name: vault-auth
+
+prometheus:
+  # Set to true to enable automatic metrics collection with Prometheus.
+  scrape: false
+  port: 9090
+
+environment:
+  # Any application-specific environment vars can be added here and will be
+  # rendered into the configmap. You can use "{:" and ":}" delimiters to pull
+  # secrets from Vault.
+  custom:
+    # Static env var: e.g. MYAPP_CUSTOM_VAR: "12345"
+    # Var from Vault: e.g. MYAPP_SECRET: "{: secret "secret/some-secret" | .Data.data.password :}"
+
+files:
+  # Any files that will need to be added to the application container at start time
+  # These files will be rendered via Consul-Template and therefore the "{:" and ":}"
+  # delimiters can be used to pull secrets from Vault.
+
+# Shell commands to be executed immediately before .Values.image.command is called
+initializationScript: ""
+
+vault:
+  # The client role defaults to namespace. Used for kubernetes authentication
+  # to Vault.
+  role: ""
+  image:
+    repository: vault
+    tag: 1.3.2
+
+nats:
+  # When true, get NATS certificates from Vault and store onto disk. Sets environment variables:
+  # - NATS_URL
+  # - NATS_TLS_CA
+  # - NATS_TLS_CERT
+  # - NATS_TLS_KEY
+  enable: true
+  tls:
+    server: false
+    client: false
+  pki:
+    issuePath: "pki/cluster.local/issue"
+    issueTtl: "8760h"
+  # This defaults to nats://nats.%s.svc.cluster.local:4222
+  uri: ""
+
+mongo:
+  # When true, get mongo credentials and render into the environment as
+  # MONGO_URL
+  enable: true
+  # This defaults to mongo.%s.svc.cluster.local:27017 filled with namespace
+  hostPort: ""
+  # Optionally specify a replicaset
+  replicaSet: ""
+  # This defaults to <namespace>-<chart-fullname>
+  database: ""
+  # This defaults to db/mongo.%s.svc.cluster.local/static-creds/%s filled in
+  # with namespace and database defaults respectively
+  authSecretPath: ""
+  # True if path is to a KV2 secret. If using a database static role this
+  # should be false.
+  isKV2Secret: false
+
+# K8s resource allocations.
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 100m
+    memory: 512Mi
+
+# Optionally define custom deployment volumes here.
+volumes:
+#- name: custom-volume
+#  configMap:
+#    name: "foo"
+#    items:
+#      - key: "some-key"
+#        path: "some-path"
+
+# Optionally define custom deployment volumeMounts here.
+volumeMounts:
+#- name: custom-volume
+#  mountPath: /etc/custommount
+
+
+# If true will run an extra initContainer that prints the rendered consul-template
+# template.
+debugDeployment: false
