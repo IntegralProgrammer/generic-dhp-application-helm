@@ -23,7 +23,7 @@ data:
     }
     auto_auth {
       method "kubernetes" {
-        mount_path = "auth/kubernetes"
+        mount_path = "{{ .Values.vault.kubernetesAuthMountPath }}"
         config = {
           role = {{ include "uhnapp.vaultRole" . | quote }}
         }

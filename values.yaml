@@ -50,6 +50,7 @@ vault:
   image:
     repository: vault
     tag: 1.3.2
+  kubernetesAuthMountPath: auth/kubernetes
 
 nats:
   # When true, get NATS certificates from Vault and store onto disk. Sets environment variables:
