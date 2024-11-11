@@ -3,6 +3,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "uhnapp.fullname" . }}
+  {{- if .Values.ingress.annotations }}
+  annotations:
+  {{- .Values.ingress.annotations | toYaml | nindent 4 }}
+  {{- end }}
   labels:
     {{- include "uhnapp.labels" . | nindent 4 }}
 spec:
