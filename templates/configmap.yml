@@ -147,7 +147,11 @@ data:
     }
 
     exec {
+      {{- if .Values.overrideConsulTemplateEntryCommand }}
+      command = "{{ .Values.overrideConsulTemplateEntryCommand }}"
+      {{- else }}
       command = "/bin/sh /vault/run.sh"
+      {{- end }}
       kill_signal = "SIGKILL"
       reload_signal = "SIGKILL"
       kill_timeout = "2s"
