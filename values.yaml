@@ -26,6 +26,7 @@ prometheus:
   # Set to true to enable automatic metrics collection with Prometheus.
   scrape: false
   port: 9090
+  path: "/"
 
 environment:
   # Any application-specific environment vars can be added here and will be

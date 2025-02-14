@@ -17,6 +17,7 @@ spec:
         {{ if .Values.prometheus.scrape -}}
         prometheus.io/scrape: "true"
         prometheus.io/port: {{ .Values.prometheus.port | quote }}
+        prometheus.io/path: {{ .Values.prometheus.path | quote }}
         {{ end -}}
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
     spec:
