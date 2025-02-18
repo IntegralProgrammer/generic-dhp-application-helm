@@ -88,6 +88,9 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+            {{- if .Values.podExtraPorts -}}
+            {{- toYaml .Values.podExtraPorts | nindent 12 -}}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
