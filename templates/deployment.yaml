@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         {{- include "uhnapp.selectorLabels" . | nindent 8 }}
+        {{- if .Values.podExtraLabels -}}
+        {{- toYaml .Values.podExtraLabels | nindent 8 -}}
+        {{- end }}
       annotations:
         {{ if .Values.prometheus.scrape -}}
         prometheus.io/scrape: "true"
