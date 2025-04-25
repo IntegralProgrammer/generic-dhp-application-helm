@@ -98,6 +98,11 @@ spec:
               mountPath: /vault
             - name: vault-config
               mountPath: /etc/vault
+            {{- if ((.Values.vault.ssl).caProvider) }}
+            - name: custom-ssl-ca
+              mountPath: /etc/internal-ssl
+              readOnly: true
+            {{- end }}
             {{-  if .Values.volumeMounts  -}}
             {{- toYaml .Values.volumeMounts | nindent 12 -}}
             {{-  end  }}
@@ -113,6 +118,14 @@ spec:
                 path: vault-agent-config.hcl
               - key: consul-template-config.hcl
                 path: consul-template-config.hcl
+        {{- if (((.Values.vault.ssl).caProvider).configMap) }}
+        - name: custom-ssl-ca
+          configMap:
+            name: {{ .Values.vault.ssl.caProvider.configMap.name }}
+            items:
+              - key: {{ .Values.vault.ssl.caProvider.configMap.key }}
+                path: ca.pem
+        {{- end }}
         {{- if .Values.volumes -}}
         {{- toYaml .Values.volumes | nindent 8 -}}
         {{- end }}

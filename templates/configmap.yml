@@ -55,6 +55,13 @@ data:
         backoff = "1s"
         max_backoff = "1m"
       }
+      {{- if .Values.vault.ssl }}
+      ssl {
+        {{- if .Values.vault.ssl.caProvider }}
+        ca_cert = "/etc/internal-ssl/ca.pem"
+        {{- end }}
+      }
+      {{- end }}
     }
 
     {{- if .Values.nats.enable }}
