@@ -38,6 +38,11 @@ spec:
               mountPath: /etc/vault
             - name: vault-shared
               mountPath: /vault
+            {{- if ((.Values.vault.ssl).caProvider) }}
+            - name: custom-ssl-ca
+              mountPath: /etc/internal-ssl
+              readOnly: true
+            {{- end }}
           args:
             [
               "agent",

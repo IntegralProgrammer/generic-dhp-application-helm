@@ -20,6 +20,9 @@ data:
     exit_after_auth = true
     vault {
       address = {{ required ".Values.vault.addr must be specified!" .Values.vault.addr | quote }}
+      {{- if ((.Values.vault.ssl).caProvider) }}
+      ca_cert = "/etc/internal-ssl/ca.pem"
+      {{- end }}
     }
     auto_auth {
       method "kubernetes" {
