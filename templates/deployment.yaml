@@ -50,7 +50,7 @@ spec:
               "-log-level=debug",
             ]
         - name: consul-template-copy
-          image: hashicorp/consul-template:0.24.1-alpine
+          image: "{{ .Values.consulTemplate.image.repository }}:{{ .Values.consulTemplate.image.tag }}"
           volumeMounts:
             - name: vault-shared
               mountPath: /vault
