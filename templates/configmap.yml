@@ -158,7 +158,7 @@ data:
 
     exec {
       {{- if .Values.overrideConsulTemplateEntryCommand }}
-      command = "{{ .Values.overrideConsulTemplateEntryCommand }}"
+      command = {{ .Values.overrideConsulTemplateEntryCommand | toJson }}
       {{- else }}
       command = "/bin/sh /vault/run.sh"
       {{- end }}
