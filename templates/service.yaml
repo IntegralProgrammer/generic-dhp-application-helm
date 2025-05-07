@@ -5,7 +5,7 @@ metadata:
   name: {{ include "uhnapp.fullname" . }}
   {{- if .Values.service.annotations }}
   annotations:
-  {{- .Values.service.annotations | toYaml | nindent 4 }}
+  {{- tpl (.Values.service.annotations | toYaml) $ | nindent 4 }}
   {{- end }}
   labels:
     {{- include "uhnapp.labels" . | nindent 4 }}
