@@ -2,4 +2,4 @@ apiVersion: v2
 name: uhn-dhp-app-deploy
 description: A Helm Chart to be used for deploying all DHP Applications (or at least as many as possible)
 type: application
-version: 0.1.11
+version: 0.1.12
