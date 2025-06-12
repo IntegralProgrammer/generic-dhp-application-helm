@@ -71,6 +71,8 @@ nats:
   pki:
     issuePath: "pki/cluster.local/issue"
     issueTtl: "8760h"
+  nkeys:
+    enable: false
   # This defaults to nats://nats.%s.svc.cluster.local:4222
   uri: ""
 

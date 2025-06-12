@@ -107,6 +107,19 @@ data:
       EOH
     }
     {{- end }}
+    {{- if .Values.nats.nkeys.enable }}
+    template {
+      perms = 0440
+      destination = "/vault/.creds.nkeys"
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      {:- with secret {{ .Values.nats.nkeys.vaultSecretPath | quote}} -:}
+      {:- base64Decode .Data.creds -:}
+      {: end :}
+      EOH
+    }
+    {{- end }}
     {{- end }}
 
     {{- range .Values.files }}
@@ -137,6 +150,9 @@ data:
       {{- if .Values.nats.tls.client }}
       export NATS_TLS_CERT="/vault/nats_cert.pem"
       export NATS_TLS_KEY="/vault/nats_key.pem"
+      {{- end }}
+      {{- if .Values.nats.nkeys.enable }}
+      export NATS_CREDS="/vault/.creds.nkeys"
       {{- end }}
       {{ end -}}
 
