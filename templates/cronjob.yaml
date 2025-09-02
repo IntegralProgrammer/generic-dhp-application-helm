@@ -1,0 +1,81 @@
+{{- range $index, $item := .Values.cronJobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "uhnapp.fullname" $ }}-cronjob-{{ $index }}
+  labels:
+    {{- include "uhnapp.labels" $ | nindent 4 }}
+spec:
+  schedule: "{{ $item.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "uhnapp.serviceAccountName" $ }}
+          initContainers:
+            # Container required to authenticate and create the initial token
+            - name: vault-agent-auth
+              image: "{{ $.Values.vault.image.repository }}:{{ $.Values.vault.image.tag }}"
+              volumeMounts:
+                - name: vault-config
+                  mountPath: /etc/vault
+                - name: vault-shared
+                  mountPath: /vault
+                {{- if (($.Values.vault.ssl).caProvider) }}
+                - name: custom-ssl-ca
+                  mountPath: /etc/internal-ssl
+                  readOnly: true
+                {{- end }}
+              args:
+                [
+                  "agent",
+                  "-config=/etc/vault/vault-agent-config.hcl",
+                  "-log-level=debug",
+                ]
+            - name: consul-template-copy
+              image: "{{ $.Values.consulTemplate.image.repository }}:{{ $.Values.consulTemplate.image.tag }}"
+              volumeMounts:
+                - name: vault-shared
+                  mountPath: /vault
+              command: ["/bin/ash", "-c"]
+              args: ["cp /bin/consul-template /vault/consul-template"]
+          containers:
+            - name: main
+              image: "{{ $item.image.repository }}:{{ $item.image.tag }}"
+              imagePullPolicy: IfNotPresent
+              command: ["/vault/consul-template"]
+              args: ["-config", "/etc/vault/consul-template-config.hcl", "-once"]
+              volumeMounts:
+                - name: vault-shared
+                  mountPath: /vault
+                - name: vault-config
+                  mountPath: /etc/vault
+                {{- if (($.Values.vault.ssl).caProvider) }}
+                - name: custom-ssl-ca
+                  mountPath: /etc/internal-ssl
+                  readOnly: true
+                {{- end }}
+
+          volumes:
+            - name: vault-shared
+              emptyDir:
+                medium: Memory
+            - name: vault-config
+              configMap:
+                name: {{ include "uhnapp.fullname" $ }}-cronjob-{{ $index }}
+                items:
+                  - key: vault-agent-config.hcl
+                    path: vault-agent-config.hcl
+                  - key: consul-template-config.hcl
+                    path: consul-template-config.hcl
+            {{- if ((($.Values.vault.ssl).caProvider).configMap) }}
+            - name: custom-ssl-ca
+              configMap:
+                name: {{ $.Values.vault.ssl.caProvider.configMap.name }}
+                items:
+                  - key: {{ $.Values.vault.ssl.caProvider.configMap.key }}
+                    path: ca.pem
+            {{- end }}
+
+{{- end }}

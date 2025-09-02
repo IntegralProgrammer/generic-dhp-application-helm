@@ -1,0 +1,165 @@
+{{- range $index, $item := .Values.cronJobs }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "uhnapp.fullname" $ }}-cronjob-{{ $index }}
+  labels:
+    {{- include "uhnapp.labels" $ | nindent 4 }}
+data:
+  vault-agent-config.hcl: |-
+    exit_after_auth = true
+    vault {
+      address = {{ required "$.Values.vault.addr must be specified!" $.Values.vault.addr | quote }}
+      {{- if (($.Values.vault.ssl).caProvider) }}
+      ca_cert = "/etc/internal-ssl/ca.pem"
+      {{- end }}
+    }
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "{{ $.Values.vault.kubernetesAuthMountPath }}"
+        config = {
+          role = {{ include "uhnapp.vaultRole" $ | quote }}
+        }
+      }
+      sink "file" {
+        config = {
+          path = "/vault/.vault-token"
+        }
+      }
+    }
+
+  consul-template-config.hcl: |-
+    log_level = "info"
+
+    vault {
+      address = {{ required "$.Values.vault.addr must be specified!" $.Values.vault.addr | quote }}
+      renew_token = true
+      vault_agent_token_file = "/vault/.vault-token"
+      retry {
+        enabled = true
+        attempts = 50
+        backoff = "1s"
+        max_backoff = "1m"
+      }
+      {{- if $.Values.vault.ssl }}
+      ssl {
+        {{- if $.Values.vault.ssl.caProvider }}
+        ca_cert = "/etc/internal-ssl/ca.pem"
+        {{- end }}
+      }
+      {{- end }}
+    }
+
+    {{- if $.Values.nats.enable }}
+    {{ $pki_role := printf "%s/%s.svc.cluster.local" $.Values.nats.pki.issuePath $.Release.Namespace }}
+    {{ $common_name := printf "common_name=%s.%s.svc.cluster.local" (include "uhnapp.fullname" $) $.Release.Namespace }}
+    {{- if $.Values.nats.tls.server }}
+    template {
+      perms = 0660
+      destination = "/vault/nats_ca.pem"
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      {:- $ip_sans := printf "ip_sans=127.0.0.1,%s" (env "MY_POD_IP") -:}
+      {:- with secret {{ $pki_role | quote}} {{ $common_name | quote }} $ip_sans "ttl={{ $.Values.nats.pki.issueTtl }}" -:}
+      {:- .Data.issuing_ca -:}{: end :}
+      EOH
+    }
+    {{- end }}
+    {{- if $.Values.nats.tls.client }}
+    template {
+      perms = 0660
+      destination = "/vault/nats_key.pem"
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      {:- $ip_sans := printf "ip_sans=127.0.0.1,%s" (env "MY_POD_IP") -:}
+      {:- with secret {{ $pki_role | quote}} {{ $common_name | quote }} $ip_sans "ttl={{ $.Values.nats.pki.issueTtl }}" -:}
+      {:- .Data.private_key -:}{: end :}
+      EOH
+    }
+    template {
+      perms = 0660
+      destination = "/vault/nats_cert.pem"
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      {:- $ip_sans := printf "ip_sans=127.0.0.1,%s" (env "MY_POD_IP") -:}
+      {:- with secret {{ $pki_role | quote}} {{ $common_name | quote }} $ip_sans "ttl={{ $.Values.nats.pki.issueTtl }}" -:}
+      {:- .Data.certificate -:}{: end :}
+      EOH
+    }
+    {{- end }}
+    {{- if $.Values.nats.nkeys.enable }}
+    template {
+      perms = 0440
+      destination = "/vault/.creds.nkeys"
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      {:- with secret {{ $.Values.nats.nkeys.vaultSecretPath | quote}} -:}
+      {:- base64Decode .Data.creds -:}
+      {: end :}
+      EOH
+    }
+    {{- end }}
+    {{- end }}
+
+    {{- range $item.files }}
+    template {
+      destination = "{{ .destination }}"
+      perms = {{ .perms }}
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      {{- tpl .contents $ | nindent 6 }}
+      EOH
+    }
+    {{- end }}
+
+    template {
+      destination = "/vault/run.sh"
+      left_delimiter  = "{:"
+      right_delimiter = ":}"
+      contents = <<EOH
+      #!/bin/sh
+
+      {{ if $.Values.nats.enable }}
+      # Configuration for app to connect to NATS
+      export NATS_URL={{ include "uhnapp.natsUri" $ | quote }}
+      {{- if $.Values.nats.tls.server }}
+      export NATS_TLS_CA="/vault/nats_ca.pem"
+      {{- end }}
+      {{- if $.Values.nats.tls.client }}
+      export NATS_TLS_CERT="/vault/nats_cert.pem"
+      export NATS_TLS_KEY="/vault/nats_key.pem"
+      {{- end }}
+      {{- if $.Values.nats.nkeys.enable }}
+      export NATS_CREDS="/vault/.creds.nkeys"
+      {{- end }}
+      {{ end -}}
+
+      {{- if $.Values.mongo.enable -}}
+      # Configuration for app to connect to Mongo
+      export MONGO_URL="{{ include "uhnapp.mongoURL" $ }}"
+      export MONGO_DB={{ include "uhnapp.database" $ }}
+      {{- end }}
+
+      {{ tpl $item.script $ | nindent 6 }}
+
+      EOH
+    }
+
+    exec {
+      {{- if $item.overrideConsulTemplateEntryCommand }}
+      command = {{ $item.overrideConsulTemplateEntryCommand | toJson }}
+      {{- else }}
+      command = "/bin/sh /vault/run.sh"
+      {{- end }}
+      kill_signal = "SIGKILL"
+      reload_signal = "SIGKILL"
+      kill_timeout = "2s"
+    }
+
+{{- end }}

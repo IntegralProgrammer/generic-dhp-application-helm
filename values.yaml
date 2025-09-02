@@ -2,8 +2,61 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-image:
-  pullPolicy: IfNotPresent
+deployment:
+  # If true will run an extra initContainer that prints the rendered consul-template
+  # template.
+  debugDeployment: false
+
+  enabled: false
+
+  environment:
+    # Any application-specific environment vars can be added here and will be
+    # rendered into the configmap. You can use "{:" and ":}" delimiters to pull
+    # secrets from Vault.
+    custom:
+      # Static env var: e.g. MYAPP_CUSTOM_VAR: "12345"
+      # Var from Vault: e.g. MYAPP_SECRET: "{: secret "secret/some-secret" | .Data.data.password :}"
+
+  files:
+    # Any files that will need to be added to the application container at start time
+    # These files will be rendered via Consul-Template and therefore the "{:" and ":}"
+    # delimiters can be used to pull secrets from Vault.
+
+  image:
+    pullPolicy: IfNotPresent
+
+  # Shell commands to be executed immediately before .Values.deployment.image.command is called
+  initializationScript: ""
+
+  prometheus:
+    # Set to true to enable automatic metrics collection with Prometheus.
+    scrape: false
+    port: 9090
+    path: "/"
+
+  # K8s resource allocations.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 512Mi
+
+  # Optionally define custom deployment volumes here.
+  volumes:
+  #- name: custom-volume
+  #  configMap:
+  #    name: "foo"
+  #    items:
+  #      - key: "some-key"
+  #        path: "some-path"
+
+  # Optionally define custom deployment volumeMounts here.
+  volumeMounts:
+  #- name: custom-volume
+  #  mountPath: /etc/custommount
+
 
 imagePullSecrets:
   - name: gitlab-uhn-registry
@@ -21,28 +74,6 @@ service:
 
 serviceAccount:
   name: vault-auth
-
-prometheus:
-  # Set to true to enable automatic metrics collection with Prometheus.
-  scrape: false
-  port: 9090
-  path: "/"
-
-environment:
-  # Any application-specific environment vars can be added here and will be
-  # rendered into the configmap. You can use "{:" and ":}" delimiters to pull
-  # secrets from Vault.
-  custom:
-    # Static env var: e.g. MYAPP_CUSTOM_VAR: "12345"
-    # Var from Vault: e.g. MYAPP_SECRET: "{: secret "secret/some-secret" | .Data.data.password :}"
-
-files:
-  # Any files that will need to be added to the application container at start time
-  # These files will be rendered via Consul-Template and therefore the "{:" and ":}"
-  # delimiters can be used to pull secrets from Vault.
-
-# Shell commands to be executed immediately before .Values.image.command is called
-initializationScript: ""
 
 vault:
   # The client role defaults to namespace. Used for kubernetes authentication
@@ -92,31 +123,3 @@ mongo:
   # True if path is to a KV2 secret. If using a database static role this
   # should be false.
   isKV2Secret: false
-
-# K8s resource allocations.
-resources:
-  requests:
-    cpu: 100m
-    memory: 128Mi
-  limits:
-    cpu: 100m
-    memory: 512Mi
-
-# Optionally define custom deployment volumes here.
-volumes:
-#- name: custom-volume
-#  configMap:
-#    name: "foo"
-#    items:
-#      - key: "some-key"
-#        path: "some-path"
-
-# Optionally define custom deployment volumeMounts here.
-volumeMounts:
-#- name: custom-volume
-#  mountPath: /etc/custommount
-
-
-# If true will run an extra initContainer that prints the rendered consul-template
-# template.
-debugDeployment: false

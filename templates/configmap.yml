@@ -1,3 +1,4 @@
+{{- if .Values.deployment.enabled }}
 ---
 
 {{- /*
@@ -12,7 +13,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "uhnapp.fullname" . }}
+  name: {{ include "uhnapp.fullname" . }}-deployment
   labels:
     {{- include "uhnapp.labels" . | nindent 4 }}
 data:
@@ -122,7 +123,7 @@ data:
     {{- end }}
     {{- end }}
 
-    {{- range .Values.files }}
+    {{- range .Values.deployment.files }}
     template {
       destination = "{{ .destination }}"
       perms = {{ .perms }}
@@ -161,20 +162,20 @@ data:
       export MONGO_URL="{{ include "uhnapp.mongoURL" . }}"
       export MONGO_DB={{ include "uhnapp.database" . }}
       {{- end }}
-      {{ if .Values.environment.custom -}}
+      {{ if .Values.deployment.environment.custom -}}
       # Custom configuration
-      {{- .Values.environment.custom | nindent 6 }}
+      {{- .Values.deployment.environment.custom | nindent 6 }}
       {{- end }}
 
-      {{ tpl .Values.initializationScript $ | nindent 6 }}
+      {{ tpl .Values.deployment.initializationScript $ | nindent 6 }}
 
-      {{ required ".Values.image.command must be specified" .Values.image.command }}
+      {{ required ".Values.deployment.image.command must be specified" .Values.deployment.image.command }}
       EOH
     }
 
     exec {
-      {{- if .Values.overrideConsulTemplateEntryCommand }}
-      command = {{ .Values.overrideConsulTemplateEntryCommand | toJson }}
+      {{- if .Values.deployment.overrideConsulTemplateEntryCommand }}
+      command = {{ .Values.deployment.overrideConsulTemplateEntryCommand | toJson }}
       {{- else }}
       command = "/bin/sh /vault/run.sh"
       {{- end }}
@@ -182,3 +183,4 @@ data:
       reload_signal = "SIGKILL"
       kill_timeout = "2s"
     }
+{{- end }}

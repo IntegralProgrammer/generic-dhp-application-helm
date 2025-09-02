@@ -1,3 +1,4 @@
+{{- if .Values.deployment.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -13,14 +14,14 @@ spec:
     metadata:
       labels:
         {{- include "uhnapp.selectorLabels" . | nindent 8 }}
-        {{- if .Values.podExtraLabels -}}
-        {{- toYaml .Values.podExtraLabels | nindent 8 -}}
+        {{- if .Values.deployment.podExtraLabels -}}
+        {{- toYaml .Values.deployment.podExtraLabels | nindent 8 -}}
         {{- end }}
       annotations:
-        {{ if .Values.prometheus.scrape -}}
+        {{ if .Values.deployment.prometheus.scrape -}}
         prometheus.io/scrape: "true"
-        prometheus.io/port: {{ .Values.prometheus.port | quote }}
-        prometheus.io/path: {{ .Values.prometheus.path | quote }}
+        prometheus.io/port: {{ .Values.deployment.prometheus.port | quote }}
+        prometheus.io/path: {{ .Values.deployment.prometheus.path | quote }}
         {{ end -}}
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yml") . | sha256sum }}
     spec:
@@ -56,7 +57,7 @@ spec:
               mountPath: /vault
           command: ["/bin/ash", "-c"]
           args: ["cp /bin/consul-template /vault/consul-template"]
-        {{- if .Values.debugDeployment }}
+        {{- if .Values.deployment.debugDeployment }}
         - name: debug-post
           image: alpine:latest
           imagePullPolicy: IfNotPresent
@@ -72,8 +73,8 @@ spec:
         {{- end }}
       containers:
         - name: "{{ required ".Values.appName must be specified!" .Values.appName }}"
-          image: "{{ required ".Values.image.repository must be specified" .Values.image.repository }}:{{ required ".Values.image.tag must be specified" .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ required ".Values.deployment.image.repository must be specified" .Values.deployment.image.repository }}:{{ required ".Values.deployment.image.tag must be specified" .Values.deployment.image.tag }}"
+          imagePullPolicy: {{ .Values.deployment.image.pullPolicy }}
           command: ["/vault/consul-template"]
           args: ["-config", "/etc/vault/consul-template-config.hcl"]
           env:
@@ -93,11 +94,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
-            {{- if .Values.podExtraPorts -}}
-            {{- toYaml .Values.podExtraPorts | nindent 12 -}}
+            {{- if .Values.deployment.podExtraPorts -}}
+            {{- toYaml .Values.deployment.podExtraPorts | nindent 12 -}}
             {{- end }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.deployment.resources | nindent 12 }}
           volumeMounts:
             - name: vault-shared
               mountPath: /vault
@@ -108,8 +109,8 @@ spec:
               mountPath: /etc/internal-ssl
               readOnly: true
             {{- end }}
-            {{-  if .Values.volumeMounts  -}}
-            {{- toYaml .Values.volumeMounts | nindent 12 -}}
+            {{-  if .Values.deployment.volumeMounts  -}}
+            {{- toYaml .Values.deployment.volumeMounts | nindent 12 -}}
             {{-  end  }}
       volumes:
         - name: vault-shared
@@ -117,7 +118,7 @@ spec:
             medium: Memory
         - name: vault-config
           configMap:
-            name: {{ include "uhnapp.fullname" . }}
+            name: {{ include "uhnapp.fullname" . }}-deployment
             items:
               - key: vault-agent-config.hcl
                 path: vault-agent-config.hcl
@@ -131,6 +132,7 @@ spec:
               - key: {{ .Values.vault.ssl.caProvider.configMap.key }}
                 path: ca.pem
         {{- end }}
-        {{- if .Values.volumes -}}
-        {{- tpl (toYaml .Values.volumes) $ | nindent 8 -}}
+        {{- if .Values.deployment.volumes -}}
+        {{- tpl (toYaml .Values.deployment.volumes) $ | nindent 8 -}}
         {{- end }}
+{{- end }}
