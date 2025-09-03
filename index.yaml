@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   uhn-dhp-app-deploy:
   - apiVersion: v2
+    created: "2025-09-03T15:11:12.436682473-04:00"
+    description: A Helm Chart to be used for deploying all DHP Applications (or at
+      least as many as possible)
+    digest: 06dc6f030761cb718b791302b6bfa5f8dac8ed194b988bf9e0f1c2cabdc6b6d5
+    name: uhn-dhp-app-deploy
+    type: application
+    urls:
+    - https://integralprogrammer.github.io/generic-dhp-application-helm/uhn-dhp-app-deploy-1.0.0-alpha.1.tgz
+    version: 1.0.0-alpha.1
+  - apiVersion: v2
     created: "2025-09-02T16:04:08.301499454-04:00"
     description: A Helm Chart to be used for deploying all DHP Applications (or at
       least as many as possible)
@@ -151,4 +161,4 @@ entries:
     urls:
     - https://integralprogrammer.github.io/generic-dhp-application-helm/uhn-dhp-app-deploy-0.1.0.tgz
     version: 0.1.0
-generated: "2025-09-02T16:04:08.299645256-04:00"
+generated: "2025-09-03T15:11:12.434784853-04:00"
