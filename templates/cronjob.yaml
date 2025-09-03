@@ -7,6 +7,9 @@ metadata:
   labels:
     {{- include "uhnapp.labels" $ | nindent 4 }}
 spec:
+  {{- if $item.concurrencyPolicy }}
+  concurrencyPolicy: {{ $item.concurrencyPolicy }}
+  {{- end }}
   schedule: "{{ $item.schedule }}"
   {{- if $item.startingDeadlineSeconds }}
   startingDeadlineSeconds: {{ $item.startingDeadlineSeconds }}
