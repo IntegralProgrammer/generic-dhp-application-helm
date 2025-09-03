@@ -44,7 +44,9 @@ spec:
           containers:
             - name: main
               image: "{{ $item.image.repository }}:{{ $item.image.tag }}"
+              {{- if $item.image.pullPolicy }}
               imagePullPolicy: IfNotPresent
+              {{- end }}
               command: ["/vault/consul-template"]
               args: ["-config", "/etc/vault/consul-template-config.hcl", "-once"]
               volumeMounts:
