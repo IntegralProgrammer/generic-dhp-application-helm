@@ -12,6 +12,7 @@ spec:
     spec:
       template:
         spec:
+          restartPolicy: {{ required "restartPolicy must be specified!" $item.restartPolicy }}
           serviceAccountName: {{ include "uhnapp.serviceAccountName" $ }}
           initContainers:
             # Container required to authenticate and create the initial token
