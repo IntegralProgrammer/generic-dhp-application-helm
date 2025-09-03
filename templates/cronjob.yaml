@@ -8,6 +8,9 @@ metadata:
     {{- include "uhnapp.labels" $ | nindent 4 }}
 spec:
   schedule: "{{ $item.schedule }}"
+  {{- if $item.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ $item.startingDeadlineSeconds }}
+  {{- end }}
   jobTemplate:
     spec:
       template:
